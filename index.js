@@ -12,6 +12,7 @@ const userRouter = require("./app/api/routes/user");
 const usersRouter = require("./app/api/routes/users");
 const dashboardRouter = require("./app/api/routes/dashboard");
 const suratMasukRouter = require("./app/api/routes/surat-masuk");
+const suratKeluarRouter = require("./app/api/routes/surat-keluar");
 const disposisiRouter = require("./app/api/routes/disposisi");
 
 const app = express();
@@ -19,7 +20,7 @@ const URL = "/api/v1.0.0";
 
 app.use(
  cors({
-  origin: "http://localhost:3001",
+  origin: "https://simpel-bps-tasikmalaya.reidteam.web.id",
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "authorization"],
   credentials: true,
@@ -42,6 +43,7 @@ app.use(`${URL}/user`, userRouter);
 app.use(`${URL}/users`, usersRouter);
 app.use(`${URL}/dashboard`, dashboardRouter);
 app.use(`${URL}/surat-masuk`, suratMasukRouter);
+app.use(`${URL}/surat-keluar`, suratKeluarRouter);
 app.use(`${URL}/disposisi`, disposisiRouter);
 
 app.use(function (req, res, next) {

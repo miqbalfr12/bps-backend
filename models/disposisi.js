@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
     foreignKey: "surat_masuk_id",
     as: "surat",
    });
+   this.belongsTo(models.SuratKeluar, {
+    foreignKey: "surat_keluar_id",
+    as: "surat_keluar",
+   });
   }
  }
  Disposisi.init(
@@ -29,15 +33,15 @@ module.exports = (sequelize, DataTypes) => {
     onUpdate: "CASCADE",
     onDelete: "SET NULL",
    },
-   //    surat_keluar_id: {
-   //     type: DataTypes.STRING,
-   //     references: {
-   //      model: "surat_keluar",
-   //      key: "surat_keluar_id",
-   //     },
-   //     onUpdate: "CASCADE",
-   //     onDelete: "SET NULL",
-   //    },
+   surat_keluar_id: {
+    type: DataTypes.STRING,
+    references: {
+     model: "surat_keluar",
+     key: "surat_keluar_id",
+    },
+    onUpdate: "CASCADE",
+    onDelete: "SET NULL",
+   },
    user_id: {
     allowNull: false,
     type: DataTypes.STRING,
@@ -54,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
    },
    catatan: {
     allowNull: false,
-    type: DataTypes.STRING,
+    type: DataTypes.JSON,
    },
    created_at: {
     allowNull: false,

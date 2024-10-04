@@ -3,7 +3,7 @@ const path = require("path");
 const config = require("../../../config");
 require("dotenv").config();
 
-const {User, SuratMasuk, Disposisi} = require("../../../models");
+const {User, SuratMasuk, SuratKeluar, Disposisi} = require("../../../models");
 const {generatePDFfromHTML} = require("../../../helper/html-pdf");
 
 const disposisiDir = config.disposisiPath;
@@ -19,10 +19,17 @@ module.exports = {
    const payload = req.body;
    payload.created_by = user.user_id;
    payload.updated_by = user.user_id;
+   payload.catatan = {
+    [user.user_id]: payload.catatan || req.body.catatan,
+   };
 
-   const getDataSurat = await SuratMasuk.findOne({
-    where: {surat_masuk_id: payload.surat_masuk_id},
-   });
+   const getDataSurat = payload.surat_masuk_id
+    ? await SuratMasuk.findOne({
+       where: {surat_masuk_id: payload.surat_masuk_id},
+      })
+    : await SuratKeluar.findOne({
+       where: {surat_keluar_id: payload.surat_keluar_id},
+      });
 
    const dataSuratJson = JSON.parse(JSON.stringify(getDataSurat));
 
@@ -43,7 +50,7 @@ module.exports = {
      }</td><td class='py-2 w-2/12'>Status</td><td class='py-2 px-1'>:</td><td class='py-2 w-3/12'>${
       dataSuratJson.status_surat
      }</td></tr><tr><td class='py-2 w-3/12'>Tanggal Surat</td><td class='py-2 px-1'>:</td><td class='py-2 w-4/12'>${
-      dataSuratJson.tanggal_surat.split("T")[0]
+      dataSuratJson?.tanggal_surat?.split("T")[0]
      }</td><td class='py-2 w-2/12'>Sifat</td><td class='py-2 px-1'>:</td><td class='py-2 w-3/12'>${
       dataSuratJson.sifat_tindakan
      }</td></tr><tr><td class='py-2 w-3/12'>No. Agenda</td><td class='py-2 px-1'>:</td><td class='py-2' colspan='3'>${
@@ -51,7 +58,7 @@ module.exports = {
      }</td></tr><tr><td class='py-2 w-3/12'>Lampiran</td><td class='py-2 px-1'>:</td><td class='py-2' colspan='3'>${
       dataSuratJson.jumlah_lampiran
      }</td></tr><tr><td class='py-2 w-3/12'>Diterima Tanggal</td><td class='py-2 px-1'>:</td><td class='py-2' colspan='3'>${
-      dataSuratJson.tanggal_diterima.split("T")[0]
+      dataSuratJson?.tanggal_diterima?.split("T")[0]
      }</td></tr><tr><td class='py-2 w-3/12'>Dari Instansi</td><td class='py-2 px-1'>:</td><td class='py-2' colspan='3'>${
       dataSuratJson.instansi_pengirim
      }</td></tr></tbody></table><h1 class='text-xl font-bold text-center py-6'>PERIHAL</h1><p class='text-center pb-4'><i>${
@@ -65,7 +72,7 @@ module.exports = {
      )}</td></tr><tr><td class='py-2 w-4/12'>Disposisi Kepada</td><td class='py-2 px-1'>:</td><td class='py-2'>${fullname}</td></tr><tr><td class='py-2 w-4/12'>Catatan ${
       user.jabatan
      }</td><td class='py-2 px-1'>:</td><td class='py-2'>${
-      payload.catatan
+      payload.catatan[user.user_id]
      }</td></tr></tbody></tbody></table></div></div></body>`;
 
      await generatePDFfromHTML(
@@ -118,20 +125,100 @@ module.exports = {
       model: SuratMasuk,
       as: "surat",
      },
+     {
+      model: SuratKeluar,
+      as: "surat_keluar",
+     },
     ],
    });
    const dataDisposisiJson = JSON.parse(JSON.stringify(getDisposisi));
-   dataDisposisiJson.map((data) => {
-    data.status_persuratan = data.surat.status_persuratan;
-    data.instansi_pengirim = data.surat.instansi_pengirim;
-    data.perihal_surat = data.surat.perihal_surat;
-    data.tanggal_disposisi = data.surat.created_at.split("T")[0];
-    data.aksi = ["viewPegawai", "viewDisposisiPegawai"];
-   });
+   await Promise.all(
+    dataDisposisiJson.map(async (data) => {
+     data.status_persuratan =
+      data?.surat?.status_persuratan ||
+      data?.surat_keluar?.status_persuratan ||
+      "";
+     data.instansi_pengirim =
+      data?.surat?.instansi_pengirim ||
+      data?.surat_keluar?.instansi_pengirim ||
+      "";
+     data.perihal_surat =
+      data?.surat?.perihal_surat || data?.surat_keluar?.perihal_surat || "";
+     data.tanggal_disposisi =
+      data?.surat?.created_at.split("T")[0] ||
+      data?.surat_keluar?.created_at.split("T")[0] ||
+      "";
+     data.tanggal_surat = data?.surat_keluar?.tanggal_surat.split("T")[0] || "";
+     data.no_surat = data?.surat_keluar?.no_surat || "";
+     data.sifat_tindakan = data?.surat_keluar?.sifat_tindakan || "";
+     data.aksi = ["viewPegawai", "viewDisposisiPegawai"];
+     console.log(data.catatan);
+     const ids = Object.keys(data.catatan);
+     console.log(ids);
+     const userData = await User.findAll({
+      where: {user_id: ids},
+     });
+     console.log(userData);
+     const userMap = userData.reduce((acc, user) => {
+      acc[user.user_id] = `${user.jabatan ? `${user.jabatan} - ` : ""}${
+       user.satker ? `${user.satker} - ` : ""
+      }${user.subag ? `${user.subag} - ` : ""}${user.fullname}`;
+      return acc;
+     }, {});
+     data.catatan = Object.entries(data.catatan).reduce(
+      (acc, [userId, value]) => {
+       const username = userMap[userId] || userId; // Fallback to userId if username not found
+       acc[username] = value;
+       return acc;
+      },
+      {}
+     );
+    })
+   );
    console.log(dataDisposisiJson);
-   res.status(200).json(dataDisposisiJson);
+   res
+    .status(200)
+    .json(
+     dataDisposisiJson.sort(
+      (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+     )
+    );
   } catch (error) {
    console.log(error);
+   return res.status(500).json({message: error.message});
+  }
+ },
+
+ tambahCatatan: async (req, res, next) => {
+  try {
+   const {catatan, disposisi_id} = req.body;
+   console.log(catatan, disposisi_id);
+   const dataDisposisi = await Disposisi.findOne({
+    where: {
+     disposisi_id,
+    },
+   });
+   if (dataDisposisi.surat_masuk_id) {
+    const dataSuratMasuk = await SuratMasuk.findOne({
+     where: {
+      surat_masuk_id: dataDisposisi.surat_masuk_id,
+     },
+    });
+    dataSuratMasuk.status_persuratan = `Response Catatan ${req.user.fullname}`;
+    dataSuratMasuk.updated_by = req.user.user_id;
+    dataSuratMasuk.updated_at = new Date();
+    await dataSuratMasuk.save();
+   }
+   console.log(dataDisposisi);
+   dataDisposisi.catatan = {
+    ...dataDisposisi.catatan,
+    [req.user.user_id]: catatan,
+   };
+   dataDisposisi.updated_at = new Date();
+   dataDisposisi.updated_by = req.user.user_id;
+   await dataDisposisi.save();
+   return res.status(201).json({message: "Berhasil Menambah Catatan"});
+  } catch (error) {
    return res.status(500).json({message: error.message});
   }
  },

@@ -29,6 +29,12 @@ const isLoginUser = async (req, res, next) => {
    },
   });
 
+  if (user.deleted_at) {
+   return res.status(401).json({
+    error: "Akun anda Tidak Aktif!",
+   });
+  }
+
   if (user) {
    user.last_activity = new Date();
    await user.save();

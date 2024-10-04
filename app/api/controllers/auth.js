@@ -236,6 +236,8 @@ module.exports = {
 
    const dataUser = userDataJson.filter((data) => data.password === true)[0];
    if (!dataUser) return res.status(403).json({message: "Password salah!"});
+   if (dataUser.deleted_at)
+    return res.status(404).json({message: "Akun anda Tidak Aktif!"});
 
    const token = jwt.sign(
     {
@@ -272,25 +274,26 @@ module.exports = {
 
  resetPassword: async (req, res) => {
   try {
-   const {nik} = req.body;
-   const getUser = await User.findOne({where: {nik}});
+   const {nik, email} = req.body;
+   const getUser = await User.findOne({where: {nik, email}});
+   console.log(getUser);
    if (getUser !== null) {
-    if (getUser.last_reset) {
-     const lastReset = new Date(getUser.last_reset);
-     const currentDate = new Date();
+    // if (getUser.last_reset) {
+    //  const lastReset = new Date(getUser.last_reset);
+    //  const currentDate = new Date();
 
-     const timeDifference = currentDate - lastReset;
-     const minutesDifference = timeDifference / (1000 * 60);
-     const hoursDifference = timeDifference / (1000 * 60 * 60);
-     if (hoursDifference < 1) {
-      res.status(403).json({
-       message: `Reset password hanya dapat dilakukan sekali dalam 1 jam! Silahkan coba kembali dalam ${(
-        60 - minutesDifference
-       ).toFixed(0)} menit lagi!`,
-      });
-      return;
-     }
-    }
+    //  const timeDifference = currentDate - lastReset;
+    //  const minutesDifference = timeDifference / (1000 * 60);
+    //  const hoursDifference = timeDifference / (1000 * 60 * 60);
+    //  if (hoursDifference < 1) {
+    //   res.status(403).json({
+    //    message: `Reset password hanya dapat dilakukan sekali dalam 1 jam! Silahkan coba kembali dalam ${(
+    //     60 - minutesDifference
+    //    ).toFixed(0)} menit lagi!`,
+    //   });
+    //   return;
+    //  }
+    // }
 
     var length = 15;
     charset =
@@ -405,16 +408,16 @@ module.exports = {
        });
       })
       .catch((error) => {
-       return res.status(500).json({error});
+       return res.status(500).json({message: error.message});
       });
     });
    } else {
-    res.status(403).json({
-     message: "email yang anda masukkan belum terdaftar.",
+    return res.status(403).json({
+     message: "Nik dan Email tidak sesuai dengan yang terdaftar!",
     });
    }
   } catch (error) {
-   res.status(500).json({
+   return res.status(500).json({
     message: error.message || `Internal server error!`,
    });
   }

@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const {Op} = require("sequelize");
-const {User, SuratMasuk, Disposisi} = require("../../../models");
+const {User, SuratMasuk, SuratKeluar, Disposisi} = require("../../../models");
 
 module.exports = {
  getDashboard: async (req, res) => {
@@ -87,11 +87,10 @@ module.exports = {
    }
 
    if (dataDiperlukan.includes("surat_keluar")) {
-    // const surat_masuk = await SuratMasuk.count({
-    //  where: whereClause,
-    // });
-    // responseData.surat_masuk = surat_masuk;
-    responseData.surat_keluar = 0;
+    const surat_keluar = await SuratKeluar.count({
+     where: whereClause,
+    });
+    responseData.surat_keluar = surat_keluar;
    }
 
    if (dataDiperlukan.includes("disposisi_surat_masuk")) {
@@ -102,11 +101,10 @@ module.exports = {
    }
 
    if (dataDiperlukan.includes("disposisi_surat_keluar")) {
-    // const surat_masuk = await SuratMasuk.count({
-    //  where: whereClause,
-    // });
-    // responseData.surat_masuk = surat_masuk;
-    responseData.surat_keluar = 0;
+    const surat_keluar = await Disposisi.count({
+     where: whereClause,
+    });
+    responseData.surat_keluar = surat_keluar;
    }
 
    return res.status(200).json(responseData);

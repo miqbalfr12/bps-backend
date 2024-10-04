@@ -17,6 +17,15 @@ module.exports = {
     onUpdate: "CASCADE",
     onDelete: "SET NULL",
    },
+   surat_keluar_id: {
+    type: Sequelize.STRING,
+    references: {
+     model: "surat_keluar",
+     key: "surat_keluar_id",
+    },
+    onUpdate: "CASCADE",
+    onDelete: "SET NULL",
+   },
    user_id: {
     allowNull: false,
     type: Sequelize.STRING,
@@ -33,7 +42,7 @@ module.exports = {
    },
    catatan: {
     allowNull: false,
-    type: Sequelize.STRING,
+    type: Sequelize.JSON,
    },
    created_at: {
     allowNull: false,

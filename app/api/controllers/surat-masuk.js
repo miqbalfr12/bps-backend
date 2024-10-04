@@ -121,15 +121,52 @@ module.exports = {
      .map((d) => d.penerima.fullname)
      .join(", ");
    });
-
-   console.log(dataSuratMasukJson);
-   if (user.jabatan === "Kepala Satker") {
-    dataSuratMasukJson.map((s) => {
-     if (s.terdisposisi.length > 0) s.aksi = [...s.aksi, "viewDisposisi"];
-     else s.aksi = [...s.aksi, "disposisi"];
-    });
+   if (user.jabatan !== "Kepala Satker") {
+    return res
+     .status(200)
+     .json(
+      dataSuratMasukJson.sort(
+       (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+      )
+     );
    }
-   return res.status(200).json(dataSuratMasukJson);
+   if (user.jabatan === "Kepala Satker") {
+    await Promise.all(
+     dataSuratMasukJson.map(async (s) => {
+      if (s.terdisposisi.length > 0) {
+       s.aksi = [...s.aksi, "viewDisposisi"];
+       const ids = s.terdisposisi.flatMap((d) => Object.keys(d.catatan));
+       const userData = await User.findAll({
+        where: {user_id: ids},
+       });
+       const userMap = userData.reduce((acc, user) => {
+        acc[user.user_id] = `${user.jabatan ? `${user.jabatan} - ` : ""}${
+         user.satker ? `${user.satker} - ` : ""
+        }${user.subag ? `${user.subag} - ` : ""}${user.fullname}`;
+        return acc;
+       }, {});
+       s.terdisposisi.map(
+        (d) =>
+         (d.catatan = Object.entries(d.catatan).reduce(
+          (acc, [userId, value]) => {
+           const username = userMap[userId] || userId; // Fallback to userId if username not found
+           acc[username] = value;
+           return acc;
+          },
+          {}
+         ))
+       );
+      } else s.aksi = [...s.aksi, "disposisi"];
+     })
+    );
+    return res
+     .status(200)
+     .json(
+      dataSuratMasukJson.sort(
+       (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+      )
+     );
+   }
   } catch (error) {
    console.log(error);
    return res.status(500).json({error: error.message});
